@@ -27,11 +27,11 @@ def mauve_parser(alignment, genomes_list):
             j = list(i.id.split("/"))
             if j[-2] == genome1:
                 scaffold_i = scaffold(genome1, j[-1], i.seq)
-                genome1_scaffolds.extend(scaffold_i)
+                genome1_scaffolds.append(scaffold_i)
             
             elif j[-2] == genome2:
                 scaffold_i = scaffold(genome1, j[-1], i.seq)
-                genome2_scaffolds.extend(scaffold_i)
+                genome2_scaffolds.append(scaffold_i)
             
             print(j[-2], j[-1])
     print("Parsing done!")
@@ -155,7 +155,7 @@ def sliding_window(genome1, genome2, size, threshold):
             else:
                 results_i = result(count_windows, None, None, None, None)
 
-            windows_out.extend(results_i)
+            windows_out.append(results_i)
 
     return windows_out
 
