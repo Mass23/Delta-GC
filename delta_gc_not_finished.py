@@ -51,19 +51,20 @@ def genome_concatenator(genome):
     scaffold_list = list()
 
     for i in genome:
-        genome_seq += i.seq
+        genome_seq += i.sequence
         scaffold_list.extend(i.begin)
 
     return(genome_seq, scaffold_list)
 
 # 3. Sliding-window function and results calculation
 class result:
-    def __init__(self, id_number, diff_gc, gc1, gc2,identity):
-        self.id_number = id_number
+    def __init__(self, id_number, diff_gc, gc1, gc2,identity, unknown):
+        self.id_number = int(id_number)
         self.diff_gc = diff_gc
         self.gc1 = gc1
         self.gc2 = gc2
         self.identity = identity
+        self.unknown = unknown
 
 def sliding_window(genome1, genome2, size, threshold):
     ''' A function that takes two concatenated genomes and compares sliding-windows.'''
@@ -85,8 +86,8 @@ def sliding_window(genome1, genome2, size, threshold):
         for i in range(0, small_seq, size):
             sw_begin = int(i)
             sw_end = int(i + size)
-            window1 = genome1[sw_begin:sw_end]
-            window2 = genome2[sw_begin:sw_end]
+            window1 = str(genome1[sw_begin:sw_end])
+            window2 = str(genome2[sw_begin:sw_end])
             count_windows += 1
 
             # counters initialisation
@@ -138,22 +139,32 @@ def sliding_window(genome1, genome2, size, threshold):
                 else:
                     print("Char not allowed!")
             
-            unknown1 = ncount1 / size
-            unknown2 = ncount2 / size
+            unknown = float((ncount1 + ncount2) / (2 * size))
 
             nuc_count1 = acount1 + ccount1 + gcount1 + tcount1
             nuc_count2 = acount2 + ccount2 + gcount2 + tcount2
-
-            gc1 = (ccount1 + gcount1)/nuc_count1
-            gc2 = (ccount2 + gcount2)/nuc_count2
-            diff_gc = gc1 - gc2
-
-            identity = identity_count / min([nuc_count1, nuc_count2])
             
-            if unknown1 and unknown2 < threshold:
-                results_i = result(count_windows, diff_gc, gc1, gc2, identity)
-            else:
-                results_i = result(count_windows, None, None, None, None)
+            try:
+                gc1 = (ccount1 + gcount1)/nuc_count1
+            except:
+                gc1 = None
+            
+            try:
+                gc2 = (ccount2 + gcount2)/nuc_count2
+            except:
+                gc2 = None
+            
+            try:
+                diff_gc = gc1 - gc2
+            except:
+                diff_gc = None
+
+            try:
+                identity = identity_count / min([nuc_count1, nuc_count2])
+            except:
+                identity = 0
+
+            results_i = result(count_windows, diff_gc, gc1, gc2, identity, unknown)
 
             windows_out.append(results_i)
 
@@ -187,54 +198,76 @@ def main(alignment, genomes_list, window_size, threshold):
     print("Writing results...")
 
     out_file = open("delta_gc.txt", 'w')
-    out_file.writelines("Window_number \t delta_gc \t gc1 \t gc2 \t identity")
+    out_file.writelines("Window_number \t delta_gc \t gc1 \t gc2 \t identity \t uncertainty \n")
 
-    identity_list = list()
-    deltagc_list = list()
-    number_list = list()
+    identity_list = []
+    deltagc_list = []
+    number_list = []
+    uncertain_list = []
 
     for i in results:
-        out_file.writelines(i.id_number + '\t' + i.diff_gc + '\t' + i.gc1 + '\t' + i.gc2 + '\t' + i.identity)
-        identity_list.extend(i.identity)
-        deltagc_list.extend(i.diff_gc)
-        number_list.extend(i.id_number)
+        out_file.writelines(str(i.id_number) + '\t' + str(i.diff_gc) + '\t' + str(i.gc1) + '\t' + str(i.gc2) + '\t' + str(i.identity) + '\t' + str(i.unknown) + "\n")
+        identity_list.append(i.identity)
+        deltagc_list.append(i.diff_gc)
+        number_list.append(i.id_number)
+        uncertain_list.append(i.unknown)
     
     out_file.close()
 
-
-    # Plot delta-GC
+# Plot delta-GC
     #Plot an horizontal line at 0, -1 and 1
+    plt.figure(1)
+
+    #Plot the results
+    plt.plot(number_list, deltagc_list,  'o', color= 'royalblue')
+    
     plt.plot((1, len(deltagc_list)), (0, 0), linestyle = 'dashed', color = 'darkgrey', lw = 0.8)
     plt.plot((1, len(deltagc_list)), (-1, -1), linestyle = 'solid', color = 'dimgrey', lw = 1)
     plt.plot((1, len(deltagc_list)), (1, 1), linestyle = 'solid', color = 'dimgrey', lw = 1)
 
-    #Plot the results
-    plt.plot(deltagc_list, number_list, 'o', color= 'royalblue')
-    plt.axis([1, len(deltagc_list), -1.1, 1.1])
-
     # Axis labels
+    plt.axis([1, len(deltagc_list), -1.1, 1.1])
     plt.ylabel('ΔGC (' + genome1 + ' - ' + genome2 + ')', size = 15)
-    plt.xlabel('Genome windows (size:' + window_size + 'bp.)', size = 15)
+    plt.xlabel('Genome windows (size:' + str(window_size) + 'bp.)', size = 15)
 
-    # Output
+    plt.savefig('Delta-GC.png')
     plt.show()
     plt.close()
 
 
-
-    # Plot Identity
+# Plot Identity
+    plt.figure(2)
     #Plot an horizontal line at 0, -1 and 1
     plt.plot((1, len(identity_list)), (0, 0), linestyle = 'dashed', color = 'darkgrey', lw = 1)
     plt.plot((1, len(identity_list)), (1, 1), linestyle = 'solid', color = 'dimgrey', lw = 1)
 
     #Plot the results
-    plt.plot(identity_list, number_list, 'o', color= 'red')
+    plt.plot(number_list, identity_list, 'o', color= 'red')
     plt.axis([1, len(identity_list), 0, 1.1])
 
     # Axis labels
     plt.ylabel('Identity', size = 15)
-    plt.xlabel('Genome windows', size = 15)
+    plt.xlabel('Genome windows (size:' + str(window_size) + 'bp.)', size = 15)
+    plt.savefig('Identity.png')
+    plt.show()
+    plt.close()
 
+
+# Plot Uncertainty
+    plt.figure(3)
+    #Plot an horizontal line at 0, -1 and 1
+    plt.plot((1, len(uncertain_list)), (0, 0), linestyle = 'dashed', color = 'darkgrey', lw = 1)
+    plt.plot((1, len(uncertain_list)), (1, 1), linestyle = 'solid', color = 'dimgrey', lw = 1)
+
+    #Plot the results
+    plt.plot(number_list, uncertain_list, 'o', color= 'green')
+    plt.axis([1, len(uncertain_list), 0, 1.1])
+    
+    # Axis labels
+    plt.ylabel('Uncertainty', size = 15)
+    plt.xlabel('Genome windows (size:' + str(window_size) + 'bp.)', size = 15)
+    plt.savefig('Uncertainty.png')
+    
     # Output
     plt.show()
     plt.close()
@@ -242,4 +275,4 @@ def main(alignment, genomes_list, window_size, threshold):
     print("Output Manhattan plots Done!")
 
 
-main("M_P_Alignment.xmfa", ['fsel_M.fasta', 'fsel_P.fasta'], 10000, 0.1)
+main("M_P_Alignment.xmfa", ['fsel_M.fasta', 'fsel_P.fasta'], 100000, 0.1)
