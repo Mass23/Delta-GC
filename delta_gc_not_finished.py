@@ -27,11 +27,11 @@ def mauve_parser(alignment, genomes_list):
             j = list(i.id.split("/"))
             if j[-2] == genome1:
                 scaffold_i = scaffold(genome1, j[-1], i.seq)
-                genome1_scaffolds.extend(genome1)
+                genome1_scaffolds.extend(scaffold_i)
             
             elif j[-2] == genome2:
                 scaffold_i = scaffold(genome1, j[-1], i.seq)
-                genome2_scaffolds.extend(genome2)
+                genome2_scaffolds.extend(scaffold_i)
             
             print(j[-2], j[-1])
     print("Parsing done!")
@@ -52,7 +52,7 @@ def genome_concatenator(genome):
 
     for i in genome:
         genome_seq += i.seq
-        scaffold_list.add(i.begin)
+        scaffold_list.extend(i.begin)
 
     return(genome_seq, scaffold_list)
 
