@@ -36,13 +36,7 @@ def mauve_parser(alignment, genomes_list):
             print(j[-2], j[-1])
     print("Parsing done!")
 
-
-    print("Sorting scaffolds...")
-    sorted_genome1_scaffolds = sorted(genome1_scaffolds, key=operator.attrgetter('begin'))
-    sorted_genome2_scaffolds = sorted(genome2_scaffolds, key=operator.attrgetter('begin'))
-    print("Sorting done!")
-
-    return([genome1, sorted_genome1_scaffolds, genome2, sorted_genome2_scaffolds])
+    return([genome1, genome1_scaffolds, genome2, genome2_scaffolds])
 
 # 2. Concatenate genome
 def genome_concatenator(genome):
@@ -66,7 +60,7 @@ class result:
         self.identity = identity
         self.unknown = unknown
 
-def sliding_window(genome1, genome2, size, threshold):
+def sliding_window(genome1, genome2, size):
     ''' A function that takes two concatenated genomes and compares sliding-windows.'''
 
     # Create the output file
@@ -105,7 +99,7 @@ def sliding_window(genome1, genome2, size, threshold):
 
             identity_count = 0
 
-            for nuc in range(size):
+            for nuc in range(min([len(window1), len(window2)])):
                 # identity
                 if window1[nuc] == window2[nuc]:
                     if window1[nuc] != 'N' or '?' or '-':
@@ -178,21 +172,25 @@ def main(alignment, genomes_list, window_size, threshold):
     genome1 = parsed_alignment[0]
     genome2 = parsed_alignment[2]
 
-    sorted_genome1_scaffolds = parsed_alignment[1]
-    sorted_genome2_scaffolds = parsed_alignment[3]
+    genome1_scaffolds = parsed_alignment[1]
+    genome2_scaffolds = parsed_alignment[3]
 
     # Genomes concatenation
 
-    genome1_seq = genome_concatenator(sorted_genome1_scaffolds)
+    genome1_seq = genome_concatenator(genome1_scaffolds)
     #scaffolds_separation_1 = genome1_seq[1] to use maybe for the output plot?
     genome1_seq = genome1_seq[0]
     
-    genome2_seq = genome_concatenator(sorted_genome2_scaffolds)
+    genome2_seq = genome_concatenator(genome2_scaffolds)
     #scaffolds_separation_2 = genome2_seq[1]
     genome2_seq = genome2_seq[0]
+    
+    print("Concatenation done!")
+    print(genome1, " size: ", len(genome1_seq))
+    print(genome2, " size: ", len(genome2_seq))
 
     # Sliding-window core function
-    results = sliding_window(genome1_seq, genome2_seq, window_size, threshold)
+    results = sliding_window(genome1_seq, genome2_seq, window_size)
 
     # Plot and file output
     print("Writing results...")
@@ -206,11 +204,22 @@ def main(alignment, genomes_list, window_size, threshold):
     uncertain_list = []
 
     for i in results:
-        out_file.writelines(str(i.id_number) + '\t' + str(i.diff_gc) + '\t' + str(i.gc1) + '\t' + str(i.gc2) + '\t' + str(i.identity) + '\t' + str(i.unknown) + "\n")
-        identity_list.append(i.identity)
-        deltagc_list.append(i.diff_gc)
-        number_list.append(i.id_number)
-        uncertain_list.append(i.unknown)
+        if i.unknown > threshold:
+            i.identity = None
+            i.gc2 = None
+            i.gc1 = None
+            i.diff_gc = None
+            out_file.writelines(str(i.id_number) + '\t' + str(i.diff_gc) + '\t' + str(i.gc1) + '\t' + str(i.gc2) + '\t' + str(i.identity) + '\t' + str(i.unknown) + "\n")
+            identity_list.append(i.identity)
+            deltagc_list.append(i.diff_gc)
+            number_list.append(i.id_number)
+            uncertain_list.append(i.unknown)
+        else:
+            out_file.writelines(str(i.id_number) + '\t' + str(i.diff_gc) + '\t' + str(i.gc1) + '\t' + str(i.gc2) + '\t' + str(i.identity) + '\t' + str(i.unknown) + "\n")
+            identity_list.append(i.identity)
+            deltagc_list.append(i.diff_gc)
+            number_list.append(i.id_number)
+            uncertain_list.append(i.unknown)
     
     out_file.close()
 
@@ -230,7 +239,6 @@ def main(alignment, genomes_list, window_size, threshold):
     plt.ylabel('ΔGC (' + genome1 + ' - ' + genome2 + ')', size = 15)
     plt.xlabel('Genome windows (size:' + str(window_size) + 'bp.)', size = 15)
 
-    plt.savefig('Delta-GC.png')
     plt.show()
     plt.close()
 
@@ -248,7 +256,6 @@ def main(alignment, genomes_list, window_size, threshold):
     # Axis labels
     plt.ylabel('Identity', size = 15)
     plt.xlabel('Genome windows (size:' + str(window_size) + 'bp.)', size = 15)
-    plt.savefig('Identity.png')
     plt.show()
     plt.close()
 
@@ -266,7 +273,6 @@ def main(alignment, genomes_list, window_size, threshold):
     # Axis labels
     plt.ylabel('Uncertainty', size = 15)
     plt.xlabel('Genome windows (size:' + str(window_size) + 'bp.)', size = 15)
-    plt.savefig('Uncertainty.png')
     
     # Output
     plt.show()
@@ -275,4 +281,4 @@ def main(alignment, genomes_list, window_size, threshold):
     print("Output Manhattan plots Done!")
 
 
-main("M_P_Alignment.xmfa", ['fsel_M.fasta', 'fsel_P.fasta'], 100000, 0.1)
+main("M_P_alignment.xmfa", ['fsel_M.fasta', 'fsel_P.fasta'], 5000, 0.1)
