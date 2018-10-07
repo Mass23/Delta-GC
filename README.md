@@ -3,7 +3,7 @@
 # To Add:
 - removing of the unaligned scaffolds at the end
 - Grey vertical line to separate scaffolds
-- Use coordinates to define the region of interest
+- Use coordinates instead of scaffold number to define the region of interest
 
 A python script that allows to calculate the sliding-window pairwise difference in GC-content between two aligned genomes in mauve (.xmfa) format. The result is shown on manhattan plots and given in a tab-separated file.
 
