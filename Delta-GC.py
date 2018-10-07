@@ -1,3 +1,10 @@
+# Author: Massimo Bourquin
+# Licence: 
+#
+
+import pandas as pd
+import numpy as np
+
 # 1. Parse mauve .xmfa file
 def mauve_parser(alignment, genomes_list):
     ''' A function that takes as input a mauve .xmfa file and outputs two sorted scaffold class instances list, one per genome.'''
@@ -6,38 +13,51 @@ def mauve_parser(alignment, genomes_list):
     genome1 = genomes_list[0]
     genome2 = genomes_list[1]
 
-    genome1_seq = str()
-    genome2_seq = str()
+    genome1_seq = []
+    genome2_seq = []
     
     print("Parsing alignment...")
 
-    data = AlignIO.parse(open(alignment), "mauve")
+    with open(alignment) as aln:
+        data = AlignIO.parse(aln, 'mauve')
     
-    for record in data:
-        for i in record:
-            j = list(i.id.split("/"))
-            if j[-2] == genome1:
-                genome1 += i.seq
+        for record in data:
+            current_genome = ''
 
-            
-            elif j[-2] == genome2:
-                genome2 += i.seq
-            
-            print(j[-2], j[-1])
+            for i in record:
+                j = list(i.id.split("/"))
+                
+                if j[-2] == current_genome:
+                    break
+
+                elif j[-2] == genome1:
+                    genome1_seq.extend([str(i.seq)])
+                    current_genome = j[-2]
+                    print(j[-2], j[-1])
+                    continue
+        
+                elif j[-2] == genome2:
+                    genome2_seq.extend([str(i.seq)])
+                    current_genome = j[-2]
+                    print(j[-2], j[-1])
+                    continue
+    
+    genome1_seq = ''.join(genome1_seq)
+    genome2_seq = ''.join(genome2_seq)
     print("Parsing done!")
 
     return([genome1, genome1_seq, genome2, genome2_seq])
 
 # 2. Sliding-window function and results calculation
 class result:
-    def __init__(self, id_number, sw_begin, diff_gc, gc1, gc2,identity, unknown):
+    def __init__(self, id_number, scaffold, diff_gc, gc1, gc2,identity, unknown):
         self.id_number = int(id_number)
         self.diff_gc = diff_gc
         self.gc1 = gc1
         self.gc2 = gc2
         self.identity = identity
         self.unknown = unknown
-        self.sw_begin = sw_begin
+        self.scaffold = scaffold
 
 def sliding_window(genome1, genome2, size, scaffold_coord):
     ''' A function that takes two concatenated genomes and compares sliding-windows.'''
@@ -65,9 +85,12 @@ def sliding_window(genome1, genome2, size, scaffold_coord):
             count_windows += 1
 
             scaffold = 0
-            for k in range(0,scaffold_coord):
-                if scaffold_coord[k] > sw_begin:
-                    scaffold = k
+            for k in scaffold_coord:
+                if k > sw_begin:
+                    scaffold = int(scaffold_coord.index(k)) + 1
+                    break
+                else:
+                    continue
 
             # counters initialisation
             acount1 = 0
@@ -158,32 +181,27 @@ def main(alignment, genomes_list, window_size, threshold, interest_scaffold):
     genome1 = parsed_alignment[0]
     genome2 = parsed_alignment[2]
 
-    scaffold_of_interest = interest_scaffold - 1
+    scaffold_of_interest = interest_scaffold
 
     genome_ref = SeqIO.parse(open(genome1), 'fasta')
     scaffold_coord = list()
-    scaffold_coord.append(0)
+    scaffold_coord.extend([0])
 
     for i in genome_ref:
         before_length = 0
-        for i in scaffold_coord:
-            before_length += i
-
+        for k in range(0,len(scaffold_coord)):
+            before_length += scaffold_coord[k]
         length = len(i.seq)
-        actual_length = before_length + length
-
+        actual_length = int(before_length + length)
         scaffold_coord.append(actual_length)
-
-    interest_begin = scaffold_coord[2]
-    interest_end = scaffold_coord[3]
 
     # Genomes sequences
     genome1_seq = parsed_alignment[1]
     genome2_seq = parsed_alignment[3]
     
     print("Concatenation done!")
-    print(genome1, " size: ", len(genome1_seq))
-    print(genome2, " size: ", len(genome2_seq))
+    print(parsed_alignment[0], " size: ", len(genome1_seq))
+    print(parsed_alignment[2], " size: ", len(genome2_seq))
 
     # Sliding-window core function
     results = sliding_window(genome1_seq, genome2_seq, window_size, scaffold_coord)
@@ -192,50 +210,71 @@ def main(alignment, genomes_list, window_size, threshold, interest_scaffold):
     print("Writing results...")
 
     out_file = open("delta_gc.csv", 'w')
-    out_file.writelines("window_number\tscaffold\tdelta_gc\tgc1\tgc2\tidentity\tuncertainty\n")
+    #out_file.writelines("window_number\tscaffold\tdelta_gc\tgc1\tgc2\tidentity\tuncertainty\n")
+
+    window_number = []
+    scaffold = []
+    delta_gc = []
+    gc1 = []
+    gc2 = []
+    identity = []
+    uncertainty = []
 
     for i in results:
+        window_number.append(i.id_number)
+        scaffold.append(i.scaffold)
 
         if i.unknown > threshold or i.identity < 0.35:
-            i.identity = None
-            i.gc2 = None
-            i.gc1 = None
-            i.diff_gc = None
-            i.unknown = None
+            i.identity = np.nan
+            identity.append(i.identity)
+            i.gc2 = np.nan
+            gc2.append(i.gc2)
+            i.gc1 = np.nan
+            gc1.append(i.gc1)
+            i.diff_gc = np.nan
+            delta_gc.append(i.diff_gc)
+            i.uncertainty = np.nan
+            uncertainty.append(i.unknown)
             out_file.writelines(str(i.id_number) + '\t' + str(i.scaffold) + '\t' + str(i.diff_gc) + '\t' + str(i.gc1) + '\t' + str(i.gc2) + '\t' + str(i.identity) + '\t' + str(i.unknown) + "\n")
 
         else:
+            identity.append(i.identity)
+            gc2.append(i.gc2)
+            gc1.append(i.gc1)
+            delta_gc.append(i.diff_gc)
+            uncertainty.append(i.unknown)
             out_file.writelines(str(i.id_number) + '\t' + str(i.scaffold) + '\t' + str(i.diff_gc) + '\t' + str(i.gc1) + '\t' + str(i.gc2) + '\t' + str(i.identity) + '\t' + str(i.unknown) + "\n")
     
-    out_file.close()
+    out_file.close() 
 
-# Parse CSV output
-    import pandas as pd
-    import numpy as np
+# Output
 
-    data = pd.read_csv("delta_gc.csv")
-
-    window_number = np.asarray(data.as_matrix(["window_number"]))[:,0]
-    scaffold = np.asarray(data.as_matrix(["scaffold"]))[:,0]
-    delta_gc = np.asarray(data.as_matrix(["delta_gc"]))[:,0]
-    gc1 = np.asarray(data.as_matrix(["gc1"]))[:,0]
-    gc2 = np.asarray(data.as_matrix(["gc2"]))[:,0]
-    identity = np.asarray(data.as_matrix(["identity"]))[:,0]
-    uncertainty = np.asarray(data.as_matrix(["uncertainty"]))[:,0]
+    in_scaffold_of_interest = np.empty(len(window_number))
+    for i in range(0, len(window_number)):
+        if scaffold[i] == scaffold_of_interest:
+            in_scaffold_of_interest[i] += 1
+    
+    abs_gc = []
+    for i in delta_gc:
+        try:
+            i = abs(i)
+            abs_gc.append(i)
+        except:
+            i = i
+            abs_gc.append(i)
 
 # Plot delta-GC
     #Plot an horizontal line at 0, -1 and 1
     plt.figure(1)
 
     #Plot the results
-    for i in delta_gc:
-        plt.plot(abs(i), color = 'lightgrey')
+    plt.plot(window_number,abs_gc, '-', color = 'lightgrey')
     
-    for i in len(gc1):
-        if scaffold[i] == scaffold_of_interest:
-            plt.plot(window_number[i], delta_gc[i],  'o', color = 'steelblue')
+    for i in range(0, len(window_number)):
+        if scaffold[i] != scaffold_of_interest:
+            plt.plot(window_number[i], delta_gc[i],  'o', color = 'salmon')
         else:
-            plt.plot(window_number[i], delta_gc[i], 'o', color = 'salmon')
+            plt.plot(window_number[i], delta_gc[i], 'o', color = 'steelblue')
     
     plt.plot((1, len(delta_gc)), (0, 0), linestyle = 'dashed', color = 'darkgrey', lw = 0.8)
     plt.plot((1, len(delta_gc)), (-1, -1), linestyle = 'solid', color = 'dimgrey', lw = 1)
@@ -290,7 +329,7 @@ def main(alignment, genomes_list, window_size, threshold, interest_scaffold):
 # Plot GC1/GC2
     plt.figure(4)
 
-    for i in len(gc1):
+    for i in range(0, len(window_number)):
         if scaffold[i] == scaffold_of_interest:
             plt.scatter(gc1[i], gc2[i], color = 'steelblue')
         else:
@@ -301,4 +340,4 @@ def main(alignment, genomes_list, window_size, threshold, interest_scaffold):
     plt.show()
     plt.close()
 
-main("M_P_alignment.xmfa", ['fsel_M.fasta', 'fsel_P.fasta'], 100000, 0.2, 3)
+main("M_P_alignment.xmfa", ['fsel_M.fasta', 'fsel_P.fasta'], 20000, 0.2, 3)
