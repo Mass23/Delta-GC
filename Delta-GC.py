@@ -1,5 +1,7 @@
 # Author: Massimo Bourquin
 # Contact: massimo.bourquin@unil.ch
+# Arguments
+# python3 Delta-GC.py"M_P_alignment.xmfa ['genom1', 'genome2'] window-size threshold-of-uncertainty-to-drop-window [region of : interest]
 
 import pandas as pd
 import numpy as np
