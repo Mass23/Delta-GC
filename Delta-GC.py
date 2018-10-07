@@ -1,14 +1,15 @@
 # Author: Massimo Bourquin
-# Licence: 
-#
+# Contact: massimo.bourquin@unil.ch
 
 import pandas as pd
 import numpy as np
+from Bio import AlignIO
+import matplotlib.pyplot as plt
+from Bio import SeqIO
 
 # 1. Parse mauve .xmfa file
 def mauve_parser(alignment, genomes_list):
     ''' A function that takes as input a mauve .xmfa file and outputs two sorted scaffold class instances list, one per genome.'''
-    from Bio import AlignIO
 
     genome1 = genomes_list[0]
     genome2 = genomes_list[1]
@@ -173,9 +174,7 @@ def sliding_window(genome1, genome2, size, scaffold_coord):
     return windows_out
 
 def main(alignment, genomes_list, window_size, threshold, interest_scaffold):
-    import matplotlib.pyplot as plt
-    from Bio import SeqIO
-
+    
     # Parsing
     parsed_alignment = mauve_parser(alignment, genomes_list)
     genome1 = parsed_alignment[0]
