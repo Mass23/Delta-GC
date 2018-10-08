@@ -352,12 +352,4 @@ def main(alignment, genomes_list, window_size, threshold, interest_scaffold):
     plt.show()
     plt.close()
 
-# F-test
-    F_test = statistics.variance(of_interest['delta_gc']) / statistics.variance(genome['delta_gc'])
-    df1 = of_interest['delta_gc'].count() - 1
-    df2 = genome['delta_gc'].count() - 1
-
-    p_value = stats.f.cdf(F_test, df1, df2)
-    print("F-test: p.value = ", p_value)
-
 main("M_P_alignment.xmfa", ['fsel_M.fasta', 'fsel_P.fasta'], 50000, 0.3, 3)
