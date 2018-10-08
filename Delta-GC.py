@@ -3,13 +3,25 @@
 # Arguments
 # python3 Delta-GC.py"M_P_alignment.xmfa ['genom1', 'genome2'] window-size threshold-of-uncertainty-to-drop-window [region of : interest]
 
+from scipy import stats
 import pandas as pd
 import numpy as np
 from Bio import AlignIO
 import matplotlib.pyplot as plt
 from Bio import SeqIO
+import seaborn as sns
+import statistics
+
 
 # 1. Parse mauve .xmfa file
+def absolute_value(value):
+    try:
+        if value < 0:
+            return(value * -1)
+        return(value)
+    except:
+        return(None)
+
 def mauve_parser(alignment, genomes_list):
     ''' A function that takes as input a mauve .xmfa file and outputs two sorted scaffold class instances list, one per genome.'''
 
@@ -23,9 +35,9 @@ def mauve_parser(alignment, genomes_list):
 
     with open(alignment) as aln:
         data = AlignIO.parse(aln, 'mauve')
+        current_genome = ''
     
         for record in data:
-            current_genome = ''
 
             for i in record:
                 j = list(i.id.split("/"))
@@ -53,7 +65,7 @@ def mauve_parser(alignment, genomes_list):
 
 # 2. Sliding-window function and results calculation
 class result:
-    def __init__(self, id_number, scaffold, diff_gc, gc1, gc2,identity, unknown):
+    def __init__(self, id_number, scaffold, diff_gc, gc1, gc2,identity, unknown, of_interest):
         self.id_number = int(id_number)
         self.diff_gc = diff_gc
         self.gc1 = gc1
@@ -61,8 +73,10 @@ class result:
         self.identity = identity
         self.unknown = unknown
         self.scaffold = scaffold
+        self.of_interest = of_interest
+        self.abs_dgc = absolute_value(diff_gc)
 
-def sliding_window(genome1, genome2, size, scaffold_coord):
+def sliding_window(genome1, genome2, size, scaffold_coord, scaffold_of_interest):
     ''' A function that takes two concatenated genomes and compares sliding-windows.'''
 
     # Create the output file
@@ -169,22 +183,25 @@ def sliding_window(genome1, genome2, size, scaffold_coord):
             except:
                 identity = 0
 
-            results_i = result(count_windows, scaffold, diff_gc, gc1, gc2, identity, unknown)
+            if scaffold == scaffold_of_interest:
+                results_i = result(count_windows, scaffold, diff_gc, gc1, gc2, identity, unknown, 1)
+            else:
+                results_i = result(count_windows, scaffold, diff_gc, gc1, gc2, identity, unknown, 0)
 
             windows_out.append(results_i)
 
     return windows_out
 
 def main(alignment, genomes_list, window_size, threshold, interest_scaffold):
-    
+
     # Parsing
     parsed_alignment = mauve_parser(alignment, genomes_list)
-    genome1 = parsed_alignment[0]
-    genome2 = parsed_alignment[2]
+    genomename1 = parsed_alignment[0]
+    genomename2 = parsed_alignment[2]
 
     scaffold_of_interest = interest_scaffold
 
-    genome_ref = SeqIO.parse(open(genome1), 'fasta')
+    genome_ref = SeqIO.parse(open(genomename1), 'fasta')
     scaffold_coord = list()
     scaffold_coord.extend([0])
 
@@ -201,90 +218,62 @@ def main(alignment, genomes_list, window_size, threshold, interest_scaffold):
     genome2_seq = parsed_alignment[3]
     
     print("Concatenation done!")
-    print(parsed_alignment[0], " size: ", len(genome1_seq))
-    print(parsed_alignment[2], " size: ", len(genome2_seq))
+    print(genomename1, " size: ", len(genome1_seq))
+    print(genomename2, " size: ", len(genome2_seq))
 
     # Sliding-window core function
-    results = sliding_window(genome1_seq, genome2_seq, window_size, scaffold_coord)
+    results = sliding_window(genome1_seq, genome2_seq, window_size, scaffold_coord, scaffold_of_interest)
 
     # Plot and file output
     print("Writing results...")
 
     out_file = open("delta_gc.csv", 'w')
-    #out_file.writelines("window_number\tscaffold\tdelta_gc\tgc1\tgc2\tidentity\tuncertainty\n")
-
-    window_number = []
-    scaffold = []
-    delta_gc = []
-    gc1 = []
-    gc2 = []
-    identity = []
-    uncertainty = []
+    out_file.writelines("window_number\tscaffold\tdelta_gc\tgc1\tgc2\tidentity\tuncertainty\tof_interest\tabs_dgc\n")
 
     for i in results:
-        window_number.append(i.id_number)
-        scaffold.append(i.scaffold)
-
-        if i.unknown > threshold or i.identity < 0.35:
+        if i.unknown > threshold:
             i.identity = np.nan
-            identity.append(i.identity)
             i.gc2 = np.nan
-            gc2.append(i.gc2)
             i.gc1 = np.nan
-            gc1.append(i.gc1)
             i.diff_gc = np.nan
-            delta_gc.append(i.diff_gc)
             i.uncertainty = np.nan
-            uncertainty.append(i.unknown)
-            out_file.writelines(str(i.id_number) + '\t' + str(i.scaffold) + '\t' + str(i.diff_gc) + '\t' + str(i.gc1) + '\t' + str(i.gc2) + '\t' + str(i.identity) + '\t' + str(i.unknown) + "\n")
+            i.abs_dgc = np.nan
+            out_file.writelines(str(i.id_number) + '\t' + str(i.scaffold) + '\t' + str(i.diff_gc) + '\t' + str(i.gc1) + '\t' + str(i.gc2) + '\t' + str(i.identity) + '\t' + str(i.unknown) + '\t' + str(i.of_interest) + '\t' + str(i.abs_dgc) + "\n")
 
         else:
-            identity.append(i.identity)
-            gc2.append(i.gc2)
-            gc1.append(i.gc1)
-            delta_gc.append(i.diff_gc)
-            uncertainty.append(i.unknown)
-            out_file.writelines(str(i.id_number) + '\t' + str(i.scaffold) + '\t' + str(i.diff_gc) + '\t' + str(i.gc1) + '\t' + str(i.gc2) + '\t' + str(i.identity) + '\t' + str(i.unknown) + "\n")
+            out_file.writelines(str(i.id_number) + '\t' + str(i.scaffold) + '\t' + str(i.diff_gc) + '\t' + str(i.gc1) + '\t' + str(i.gc2) + '\t' + str(i.identity) + '\t' + str(i.unknown) + '\t' + str(i.of_interest) + '\t' + str(i.abs_dgc) + "\n")
     
     out_file.close() 
 
-# Output
 
-    in_scaffold_of_interest = np.empty(len(window_number))
-    for i in range(0, len(window_number)):
-        if scaffold[i] == scaffold_of_interest:
-            in_scaffold_of_interest[i] += 1
-    
-    abs_gc = []
-    for i in delta_gc:
-        try:
-            i = abs(i)
-            abs_gc.append(i)
-        except:
-            i = i
-            abs_gc.append(i)
+# Plotting:
+    data = pd.read_csv('delta_gc.csv', delimiter="\t")
+
+    mask_of_interest = data['of_interest'].eq(1)
+    mask_genome = data['of_interest'].eq(0)
+
+    of_interest = data[mask_of_interest].dropna()
+    genome = data[mask_genome].dropna()
 
 # Plot delta-GC
-    #Plot an horizontal line at 0, -1 and 1
     plt.figure(1)
+    plt.title("Delta-GC")
+    sns.set_style('white')
+    sns.set_context("paper")
 
-    #Plot the results
-    plt.plot(window_number,abs_gc, '-', color = 'lightgrey')
-    
-    for i in range(0, len(window_number)):
-        if scaffold[i] != scaffold_of_interest:
-            plt.plot(window_number[i], delta_gc[i],  'o', color = 'salmon')
-        else:
-            plt.plot(window_number[i], delta_gc[i], 'o', color = 'steelblue')
-    
-    plt.plot((1, len(delta_gc)), (0, 0), linestyle = 'dashed', color = 'darkgrey', lw = 0.8)
-    plt.plot((1, len(delta_gc)), (-1, -1), linestyle = 'solid', color = 'dimgrey', lw = 1)
-    plt.plot((1, len(delta_gc)), (1, 1), linestyle = 'solid', color = 'dimgrey', lw = 1)
+    # Horizontal line at 0
+    plt.plot((0, data['abs_dgc'].count()), (0, 0), linestyle = 'dashed', color = 'darkgrey', lw = 0.8)
+
+    # Plot the dgc    
+    plt.plot(genome['window_number'], genome['delta_gc'], 'o', color = 'salmon')
+    plt.plot(of_interest['window_number'], of_interest['delta_gc'], 'o', color = 'steelblue')
+
+    # Plot absolute value of dgc
+    plt.plot(data['window_number'],data['abs_dgc'], '-', color = 'lightgrey')
 
     # Axis labels
-    plt.axis([1, len(delta_gc), -0.2, 0.2])
-    plt.ylabel('ΔGC (' + genome1 + ' - ' + genome2 + ')', size = 15)
-    plt.xlabel('Genome windows (size:' + str(window_size) + 'bp.)', size = 15)
+    plt.xlabel('Genome windows (size: ' + str(window_size) + 'bp.)')
+    plt.ylabel('ΔGC: ' + genomename1 + ' - ' + genomename2)
 
     plt.show()
     plt.close()
@@ -292,13 +281,17 @@ def main(alignment, genomes_list, window_size, threshold, interest_scaffold):
 
 # Plot Identity
     plt.figure(2)
+    plt.title("Identity")
+    sns.set_style('white')
+    sns.set_context("paper")
+
     #Plot an horizontal line at 0, -1 and 1
-    plt.plot((1, len(identity)), (0, 0), linestyle = 'dashed', color = 'darkgrey', lw = 1)
-    plt.plot((1, len(identity)), (1, 1), linestyle = 'solid', color = 'dimgrey', lw = 1)
+    plt.plot((0, data['identity'].count()), (0, 0), linestyle = 'dashed', color = 'darkgrey', lw = 1)
+    plt.plot((0, data['identity'].count()), (1, 1), linestyle = 'solid', color = 'dimgrey', lw = 1)
 
     #Plot the results
-    plt.plot(window_number, identity, 'o', color= 'red')
-    plt.axis([1, len(identity), 0, 1.1])
+    plt.plot(genome['window_number'], genome['identity'],  'o', color = 'salmon')
+    plt.plot(of_interest['window_number'], of_interest['identity'], 'o', color = 'steelblue')
 
     # Axis labels
     plt.ylabel('Identity', size = 15)
@@ -309,13 +302,17 @@ def main(alignment, genomes_list, window_size, threshold, interest_scaffold):
 
 # Plot Uncertainty
     plt.figure(3)
+    plt.title("Uncertainty")
+    sns.set_style('white')
+    sns.set_context("paper")
+
     #Plot an horizontal line at 0, -1 and 1
-    plt.plot((1, len(uncertainty)), (0, 0), linestyle = 'dashed', color = 'darkgrey', lw = 1)
-    plt.plot((1, len(uncertainty)), (1, 1), linestyle = 'solid', color = 'dimgrey', lw = 1)
+    plt.plot((1, data['uncertainty'].count()), (0, 0), linestyle = 'dashed', color = 'darkgrey', lw = 1)
+    plt.plot((1, data['uncertainty'].count()), (1, 1), linestyle = 'solid', color = 'dimgrey', lw = 1)
 
     #Plot the results
-    plt.plot(window_number, uncertainty, 'o', color= 'green')
-    plt.axis([1, len(uncertainty), 0, 1.1])
+    plt.plot(genome['window_number'], genome['uncertainty'],  'o', color = 'salmon')
+    plt.plot(of_interest['window_number'], of_interest['uncertainty'], 'o', color = 'steelblue')
     
     # Axis labels
     plt.ylabel('Uncertainty', size = 15)
@@ -329,16 +326,38 @@ def main(alignment, genomes_list, window_size, threshold, interest_scaffold):
 
 # Plot GC1/GC2
     plt.figure(4)
+    plt.title("GC1 / GC2")
+    sns.set_style('white')
+    sns.set_context("paper")
 
-    for i in range(0, len(window_number)):
-        if scaffold[i] == scaffold_of_interest:
-            plt.scatter(gc1[i], gc2[i], color = 'steelblue')
-        else:
-            plt.scatter(gc1[i],gc2[i],color = 'salmon')
-    plt.xlabel(genome1, size = 15)
-    plt.ylabel(genome2, size = 15)
+    sns.kdeplot(genome['gc1'], genome['gc2'], cmap="Reds", shade=True, shade_lowest=False)
+    sns.kdeplot(of_interest['gc1'], of_interest['gc2'], cmap="Blues", shade=True, shade_lowest=False)
+
+    plt.xlabel(genomename1 + " GC content", size = 15)
+    plt.ylabel(genomename2 + " GC content", size = 15)
 
     plt.show()
     plt.close()
 
-main("M_P_alignment.xmfa", ['fsel_M.fasta', 'fsel_P.fasta'], 20000, 0.2, 3)
+# Plot distributions
+    plt.figure(5)
+    plt.title("Density plot")
+    sns.set_style('white')
+    sns.set_context("paper")
+
+    sns.set_style('whitegrid')
+    sns.distplot(genome['delta_gc'], color="salmon", hist=False)
+    sns.distplot(of_interest['delta_gc'], color="steelblue", hist=False)
+
+    plt.show()
+    plt.close()
+
+# F-test
+    F_test = statistics.variance(of_interest['delta_gc']) / statistics.variance(genome['delta_gc'])
+    df1 = of_interest['delta_gc'].count() - 1
+    df2 = genome['delta_gc'].count() - 1
+
+    p_value = stats.f.cdf(F_test, df1, df2)
+    print("F-test: p.value = ", p_value)
+
+main("M_P_alignment.xmfa", ['fsel_M.fasta', 'fsel_P.fasta'], 50000, 0.3, 3)
