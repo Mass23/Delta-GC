@@ -201,17 +201,15 @@ def main(alignment, genomes_list, window_size, threshold, interest_scaffold):
 
     scaffold_of_interest = interest_scaffold
 
-    genome_ref = SeqIO.parse(open(genomename1), 'fasta')
     scaffold_coord = list()
     scaffold_coord.extend([0])
+    previous_length = 0
 
-    for i in genome_ref:
-        before_length = 0
-        for k in range(0,len(scaffold_coord)):
-            before_length += scaffold_coord[k]
-        length = len(i.seq)
-        actual_length = int(before_length + length)
-        scaffold_coord.append(actual_length)
+    for i in SeqIO.parse(open(genomename1), 'fasta'):
+        scaffold_length = int(len(i.seq))
+        current_length = int(previous_length + scaffold_length)
+        scaffold_coord.append(current_length)
+        previous_length = current_length
 
     # Genomes sequences
     genome1_seq = parsed_alignment[1]
@@ -245,111 +243,4 @@ def main(alignment, genomes_list, window_size, threshold, interest_scaffold):
     
     out_file.close() 
 
-
-# Plotting:
-    data = pd.read_csv('delta_gc.csv', delimiter="\t")
-
-    mask_of_interest = data['of_interest'].eq(1)
-    mask_genome = data['of_interest'].eq(0)
-
-    of_interest = data[mask_of_interest].dropna()
-    genome = data[mask_genome].dropna()
-
-# Plot delta-GC
-    plt.figure(1)
-    plt.title("Delta-GC")
-    sns.set_style('white')
-    sns.set_context("paper")
-
-    # Horizontal line at 0
-    plt.plot((0, data['abs_dgc'].count()), (0, 0), linestyle = 'dashed', color = 'darkgrey', lw = 0.8)
-
-    # Plot the dgc    
-    plt.plot(genome['window_number'], genome['delta_gc'], 'o', color = 'salmon')
-    plt.plot(of_interest['window_number'], of_interest['delta_gc'], 'o', color = 'steelblue')
-
-    # Plot absolute value of dgc
-    plt.plot(data['window_number'],data['abs_dgc'], '-', color = 'lightgrey')
-
-    # Axis labels
-    plt.xlabel('Genome windows (size: ' + str(window_size) + 'bp.)')
-    plt.ylabel('ΔGC: ' + genomename1 + ' - ' + genomename2)
-
-    plt.show()
-    plt.close()
-
-
-# Plot Identity
-    plt.figure(2)
-    plt.title("Identity")
-    sns.set_style('white')
-    sns.set_context("paper")
-
-    #Plot an horizontal line at 0, -1 and 1
-    plt.plot((0, data['identity'].count()), (0, 0), linestyle = 'dashed', color = 'darkgrey', lw = 1)
-    plt.plot((0, data['identity'].count()), (1, 1), linestyle = 'solid', color = 'dimgrey', lw = 1)
-
-    #Plot the results
-    plt.plot(genome['window_number'], genome['identity'],  'o', color = 'salmon')
-    plt.plot(of_interest['window_number'], of_interest['identity'], 'o', color = 'steelblue')
-
-    # Axis labels
-    plt.ylabel('Identity', size = 15)
-    plt.xlabel('Genome windows (size:' + str(window_size) + 'bp.)', size = 15)
-    plt.show()
-    plt.close()
-
-
-# Plot Uncertainty
-    plt.figure(3)
-    plt.title("Uncertainty")
-    sns.set_style('white')
-    sns.set_context("paper")
-
-    #Plot an horizontal line at 0, -1 and 1
-    plt.plot((1, data['uncertainty'].count()), (0, 0), linestyle = 'dashed', color = 'darkgrey', lw = 1)
-    plt.plot((1, data['uncertainty'].count()), (1, 1), linestyle = 'solid', color = 'dimgrey', lw = 1)
-
-    #Plot the results
-    plt.plot(genome['window_number'], genome['uncertainty'],  'o', color = 'salmon')
-    plt.plot(of_interest['window_number'], of_interest['uncertainty'], 'o', color = 'steelblue')
-    
-    # Axis labels
-    plt.ylabel('Uncertainty', size = 15)
-    plt.xlabel('Genome windows (size:' + str(window_size) + 'bp.)', size = 15)
-    
-    # Output
-    plt.show()
-    plt.close()
-
-    print("Output Manhattan plots Done!")
-
-# Plot GC1/GC2
-    plt.figure(4)
-    plt.title("GC1 / GC2")
-    sns.set_style('white')
-    sns.set_context("paper")
-
-    sns.kdeplot(genome['gc1'], genome['gc2'], cmap="Reds", shade=True, shade_lowest=False)
-    sns.kdeplot(of_interest['gc1'], of_interest['gc2'], cmap="Blues", shade=True, shade_lowest=False)
-
-    plt.xlabel(genomename1 + " GC content", size = 15)
-    plt.ylabel(genomename2 + " GC content", size = 15)
-
-    plt.show()
-    plt.close()
-
-# Plot distributions
-    plt.figure(5)
-    plt.title("Density plot")
-    sns.set_style('white')
-    sns.set_context("paper")
-
-    sns.set_style('whitegrid')
-    sns.distplot(genome['delta_gc'], color="salmon", hist=False)
-    sns.distplot(of_interest['delta_gc'], color="steelblue", hist=False)
-
-    plt.show()
-    plt.close()
-
-main("M_P_alignment.xmfa", ['fsel_M.fasta', 'fsel_P.fasta'], 50000, 0.3, 3)
+main("M_P_alignment.xmfa", ['fsel_M.fasta', 'fsel_P.fasta'], 20000, 0.3, 3)
