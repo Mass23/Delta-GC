@@ -1,11 +1,7 @@
 # Delta-GC
 
 # To Add:
-- removing of the unaligned scaffolds at the end
-- Grey vertical line to separate scaffolds
 - Use coordinates instead of scaffold number to define the region of interest
-- Change colors and add region of interest in all three plots
-- Heatmap vs Linear regression
 
 A python script that allows to calculate the sliding-window pairwise difference in GC-content between two aligned genomes in mauve (.xmfa) format. The result is shown on manhattan plots and given in a tab-separated file.
 
