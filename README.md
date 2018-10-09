@@ -25,3 +25,9 @@ A python script that allows to calculate the sliding-window pairwise difference 
 # Linear regression of GC1 on GC2
 
 ![alt text](https://github.com/Mass23/Delta-GC/blob/master/Figure_4.png)
+
+# Distribution plots
+
+![alt text](https://github.com/Mass23/Delta-GC/blob/master/Figure_4.png)
+
+# ANOVA and means
