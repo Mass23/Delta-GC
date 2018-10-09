@@ -6,9 +6,7 @@
 from scipy import stats
 import pandas as pd
 import numpy as np
-from Bio import AlignIO
 import matplotlib.pyplot as plt
-from Bio import SeqIO
 import seaborn as sns
 import statistics
 
