@@ -26,8 +26,8 @@ A python script that allows to calculate the sliding-window pairwise difference 
 
 ![alt text](https://github.com/Mass23/Delta-GC/blob/master/Figure_4.png)
 
-# Distribution plots
+# Delta-GC distribution plots
 
 ![alt text](https://github.com/Mass23/Delta-GC/blob/master/Figure_4.png)
 
-# ANOVA and means
+# Delta-GC ANOVA and means
