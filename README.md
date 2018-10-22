@@ -30,7 +30,7 @@ A python script that allows to calculate the sliding-window pairwise difference 
 
 ![alt text](https://github.com/Mass23/Delta-GC/blob/master/Figure_5.png)
 
-# Delta-GC ANOVA and means
+# Mann-Whitney U-test and metrics
 
 Mann-Whitney U-test:
  - Statistic: 71292.0
