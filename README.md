@@ -33,8 +33,8 @@ A python script that allows to calculate the sliding-window pairwise difference 
 # Delta-GC ANOVA and means
 
 Mann-Whitney U-test:
- - 
- - 
+ - Statistic: 71292.0
+ - p-value: 0.007928101563691278
 
 Mean of Delta-GC: 
  - Scaffold of interest:  0.0009492675285102437
