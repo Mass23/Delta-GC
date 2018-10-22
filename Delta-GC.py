@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # Author: Massimo Bourquin
 # Contact: massimo.bourquin@unil.ch
 # Arguments
