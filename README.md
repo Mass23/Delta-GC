@@ -32,12 +32,9 @@ A python script that allows to calculate the sliding-window pairwise difference 
 
 # Delta-GC ANOVA and means
 
-One-way ANOVA results:
-
-|             | sum_sq      |df           |F          |PR(>F)       |
-|-------------|-------------|-------------|-----------|-------------|
-|of_interest  |0.000585     |1.0          |28.573769  |9.233950e-08 |
-|Residual     |0.189652     |9271.0       |NaN        |NaN          |
+Mann-Whitney U-test:
+ - 
+ - 
 
 Mean of Delta-GC: 
  - Scaffold of interest:  0.0009492675285102437
