@@ -19,14 +19,13 @@ class AlignmentScaffold:
         self.alt_sequence = alt_sequence
 
 def AbsoluteValue(value):
-    """ A function that returns the absolut value and allows None values by returning None."""
     try:
         if value < 0:
             return(value * -1)
         else:
             return(value)
     except:
-        return(None)
+        return('nan')
 
 def GetGenomeScaffoldsSize(reference_genome):
     from Bio import SeqIO
@@ -40,7 +39,7 @@ def GetGenomeScaffoldsSize(reference_genome):
             beginning = total_length
             length = len(record.seq)
             end = beginning + length
-            
+
             total_length += len(record.seq)
 
             scaffold_dict[record.id] = Scaffold(beginning = beginning, end = end, scaffold = record.id)
@@ -66,7 +65,7 @@ def ParseMauve(alignment_file):
 
                 ref_scaffold = aln_scaffold[0]
                 alt_scaffold = aln_scaffold[1]
-                
+
                 ref_id = ref_scaffold.id.split('/')
                 ref_beginning = int(ref_id[-1].split('-')[0])
                 ref_end = int(ref_id[-1].split('-')[-1])
@@ -79,7 +78,7 @@ def ParseMauve(alignment_file):
 
             else:
                 break
-        
+
         return(aln_scaffold_dict, aln_scaffold_list)
 
 def GetIdentity(ref_sequence, alt_sequence):
@@ -91,11 +90,11 @@ def GetIdentity(ref_sequence, alt_sequence):
             identity_count += 1
         else:
             continue
-    
+
     try:
         identity = identity_count / seq_length
     except:
-        identity = None
+        identity = 'nan'
 
     return(identity)
 
@@ -105,10 +104,10 @@ def GetGC(sequence):
     gcount = sequence.count('G')
     tcount = sequence.count('T')
 
-    try: 
+    try:
         gc_content = (gcount + ccount) / (acount + ccount + gcount + tcount)
     except:
-        gc_content = None
+        gc_content = 'nan'
 
     return(gc_content)
 
@@ -119,11 +118,10 @@ def GetUncertainty(sequence):
     try:
         uncertainty = ncount / length
     except:
-        uncertainty = None
+        uncertainty = 'nan'
     return(uncertainty)
 
 def sliding_window(sequence1, sequence2, window_size, length):
-    ''' A function that takes two sequences and compares sliding-windows.'''
 
     windows_list = list()
     identity_list = list()
@@ -153,10 +151,10 @@ def sliding_window(sequence1, sequence2, window_size, length):
         try:
             delta_gc = gc1 - gc2
         except:
-            delta_gc = None
+            delta_gc = 'nan'
         delta_gc_list.append(delta_gc)
 
-    return(windows_list, identity_list, uncertainty1_list, uncertainty2_list, gc1_list, gc2_list, delta_gc_list)         
+    return(windows_list, identity_list, uncertainty1_list, uncertainty2_list, gc1_list, gc2_list, delta_gc_list)
 
 def Main(reference_genome, alignment_file, window_size):
 
@@ -174,24 +172,24 @@ def Main(reference_genome, alignment_file, window_size):
 
     print("Writing results...")
     # Create output file
-    output_file = open('Delta_GC.txt', 'w')
-    output_file.write(''.join(['Scaffold', '\t', 
-                            'Alignment_scaffold', '\t', 
-                            'Window_number','\t', 
-                            'Beginning', '\t', 
-                            'End', '\t', 
-                            'Delta_GC', '\t', 
-                            'Absolute_Delta_GC', '\t', 
-                            'GC1', '\t', 
-                            'GC2', '\t', 
-                            'Identity', '\t', 
-                            'Uncertainty', '\t', 
-                            'Uncertainty1', '\t', 
+    output_file = open('Delta_GC.csv', 'w')
+    output_file.write(''.join(['Scaffold', '\t',
+                            'Alignment_scaffold', '\t',
+                            'Window_number','\t',
+                            'Beginning', '\t',
+                            'End', '\t',
+                            'Delta_GC', '\t',
+                            'Absolute_Delta_GC', '\t',
+                            'GC1', '\t',
+                            'GC2', '\t',
+                            'Identity', '\t',
+                            'Uncertainty', '\t',
+                            'Uncertainty1', '\t',
                             'Uncertainty2', '\n']))
 
     # Iterate through each scaffold
     for scaffold in scaffold_list:
-        
+
         scaffold_beginning = scaffold_dict[scaffold].beginning
         scaffold_end = scaffold_dict[scaffold].end
 
@@ -209,7 +207,7 @@ def Main(reference_genome, alignment_file, window_size):
 
             # If the alignment scaffold is in the scaffold: process
             if aln_scaffold_beginning > scaffold_beginning and aln_scaffold_end < scaffold_end:
-                
+
                 # Process the alignment scaffold
                 aln_scaffold_results = sliding_window(aln_scaffold_ref_seq, aln_scaffold_alt_seq, window_size, aln_scaffold_length)
 
@@ -228,18 +226,18 @@ def Main(reference_genome, alignment_file, window_size):
                     # Add the results to the file
                     beginning = aln_scaffold_beginning + (i * window_size)
                     end = aln_scaffold_beginning + (i * window_size) + window_size
-                    output_file.write(''.join([str(scaffold), '\t', 
-                                            str(aln_scaffold_count), '\t', 
-                                            str(windows_list[i]),'\t', 
-                                            str(beginning), '\t', 
-                                            str(end), '\t', 
-                                            str(delta_gc_list[i]), '\t', 
-                                            str(AbsoluteValue(delta_gc_list[i])), '\t', 
-                                            str(gc1_list[i]), '\t', 
-                                            str(gc2_list[i]), '\t', 
-                                            str(identity_list[i]), '\t', 
-                                            str((uncertainty1_list[i] + uncertainty2_list[i]) / 2), '\t', 
-                                            str(uncertainty1_list[i]), '\t', 
+                    output_file.write(''.join([str(scaffold.replace('Scaffold', '')).replace('Contig', '10'), '\t',
+                                            str(aln_scaffold_count), '\t',
+                                            str(windows_list[i]),'\t',
+                                            str(beginning), '\t',
+                                            str(end), '\t',
+                                            str(delta_gc_list[i]), '\t',
+                                            str(AbsoluteValue(delta_gc_list[i])), '\t',
+                                            str(gc1_list[i]), '\t',
+                                            str(gc2_list[i]), '\t',
+                                            str(identity_list[i]), '\t',
+                                            str((uncertainty1_list[i] + uncertainty2_list[i]) / 2), '\t',
+                                            str(uncertainty1_list[i]), '\t',
                                             str(uncertainty2_list[i]), '\n']))
                 # Remove the aln_scaffold processed:
                 aln_scaffold_list.remove(aln_scaffold)
